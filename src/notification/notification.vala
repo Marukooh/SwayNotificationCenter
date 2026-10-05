@@ -91,6 +91,7 @@ namespace SwayNotificationCenter {
         private static Regex tag_regex;
         private static Regex tag_unescape_regex;
         private static Regex img_tag_regex;
+        private static Regex br_tag_regex;
         private const string[] TAGS = { "b", "u", "i" };
         private const string[] UNESCAPE_CHARS = {
             "lt;", "#60;", "#x3C;", "#x3c;", // <
@@ -139,6 +140,10 @@ namespace SwayNotificationCenter {
                 string unescaped = string.joinv ("|", UNESCAPE_CHARS);
                 tag_unescape_regex = new Regex ("&amp;(?=%s)".printf (unescaped));
                 img_tag_regex = new Regex ("<img[^>]* src=((\"([^\"]*)\")|(\'([^\']*)\'))[^>]*>");
+                // <br>, <br/>, </br> (raw or already escaped): Pango markup
+                // has no line-break tag, so they'd show up as text
+                br_tag_regex = new Regex ("(<|&lt;)\\s*/?\\s*br\\s*/?\\s*(>|&gt;)",
+                                          RegexCompileFlags.CASELESS);
             } catch (Error e) {
                 stderr.printf ("Invalid regex: %s", e.message);
             }
@@ -360,6 +365,13 @@ namespace SwayNotificationCenter {
                 } catch (Error e) {
                     stderr.printf (e.message);
                 }
+            }
+
+            // Line breaks first (e.g. WhatsApp joins messages with "</br>")
+            try {
+                text = br_tag_regex.replace (text, text.length, 0, "\n");
+            } catch (Error e) {
+                stderr.printf (e.message);
             }
 
             // Markup
