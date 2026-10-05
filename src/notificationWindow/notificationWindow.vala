@@ -12,6 +12,10 @@ namespace SwayNotificationCenter {
 
         private static string ?monitor_name = null;
 
+        // Only ask for the keyboard (inline replies) while the pointer is over
+        // the popup, so an incoming notification never steals focus.
+        private bool pointer_inside = false;
+
         private const int MAX_HEIGHT = 600;
 
         public NotificationWindow () {
@@ -47,6 +51,17 @@ namespace SwayNotificationCenter {
                     Idle.add_once (() => set_keyboard_mode ());
                 });
             });
+            var motion = new Gtk.EventControllerMotion ();
+            motion.enter.connect (() => {
+                pointer_inside = true;
+                set_keyboard_mode ();
+            });
+            motion.leave.connect (() => {
+                pointer_inside = false;
+                set_keyboard_mode ();
+            });
+            ((Gtk.Widget) this).add_controller (motion);
+
             this.unmap.connect (() => {
                 set_keyboard_mode ();
                 debug ("NotificationWindow un-mapped");
@@ -96,7 +111,7 @@ namespace SwayNotificationCenter {
          */
         private inline void set_keyboard_mode () {
             if (app.use_layer_shell) {
-                if (app.has_layer_on_demand && get_mapped ()
+                if (app.has_layer_on_demand && get_mapped () && pointer_inside
                     && !inline_reply_notifications.is_empty) {
                     GtkLayerShell.set_keyboard_mode (this, GtkLayerShell.KeyboardMode.ON_DEMAND);
                 } else {
