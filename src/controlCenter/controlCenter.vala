@@ -309,11 +309,28 @@ namespace SwayNotificationCenter {
                 set_monitor (Functions.try_get_monitor (monitor_name));
             }
 
-            // Set the window margins
-            window.set_margin_top (ConfigModel.instance.control_center_margin_top);
-            window.set_margin_start (ConfigModel.instance.control_center_margin_left);
-            window.set_margin_end (ConfigModel.instance.control_center_margin_right);
-            window.set_margin_bottom (ConfigModel.instance.control_center_margin_bottom);
+            // Set the window margins. When the surface doesn't cover the
+            // screen, use layer-shell margins so the gap stays outside of the
+            // surface (keeps compositor blur/shadows on the visible box only).
+            if (app.use_layer_shell && !ConfigModel.instance.layer_shell_cover_screen) {
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.TOP,
+                                          ConfigModel.instance.control_center_margin_top);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.LEFT,
+                                          ConfigModel.instance.control_center_margin_left);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.RIGHT,
+                                          ConfigModel.instance.control_center_margin_right);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.BOTTOM,
+                                          ConfigModel.instance.control_center_margin_bottom);
+                window.set_margin_top (0);
+                window.set_margin_start (0);
+                window.set_margin_end (0);
+                window.set_margin_bottom (0);
+            } else {
+                window.set_margin_top (ConfigModel.instance.control_center_margin_top);
+                window.set_margin_start (ConfigModel.instance.control_center_margin_left);
+                window.set_margin_end (ConfigModel.instance.control_center_margin_right);
+                window.set_margin_bottom (ConfigModel.instance.control_center_margin_bottom);
+            }
 
             // Anchor window to north/south edges as needed
             Gtk.Align align_x = Gtk.Align.END;
@@ -364,6 +381,28 @@ namespace SwayNotificationCenter {
                                      ConfigModel.instance.control_center_height);
             box.set_size_request (ConfigModel.instance.control_center_width,
                                   ConfigModel.instance.control_center_height);
+        }
+
+        /**
+         * GTK keeps the first computed size as the default size, so the
+         * surface never follows its content. Reset it whenever the content
+         * changes (now and once the list animations are done).
+         */
+        public void fit_to_content () {
+            if (ConfigModel.instance.fit_to_screen
+                || ConfigModel.instance.control_center_height > 0) {
+                return;
+            }
+            fit_now ();
+            Timeout.add_once (ConfigModel.instance.transition_time + 60, fit_now);
+        }
+
+        private void fit_now () {
+            if (!this.visible) {
+                return;
+            }
+            set_default_size (-1, -1);
+            queue_resize ();
         }
 
         public bool toggle_visibility () {

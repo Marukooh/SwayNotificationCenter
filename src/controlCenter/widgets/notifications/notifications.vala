@@ -146,6 +146,7 @@ namespace SwayNotificationCenter.Widgets {
         }
 
         public void remove_all_notifications (bool animate) {
+            Idle.add_once (() => control_center.fit_to_content ());
             noti_groups_id.clear ();
             n_notifications = 0;
             n_groups = 0;
@@ -192,6 +193,7 @@ namespace SwayNotificationCenter.Widgets {
 
         /** Removes the notification widget with ID. Doesn't dismiss */
         public void remove_notification (uint32 id) {
+            Idle.add_once (() => control_center.fit_to_content ());
             NotificationGroup ?group = noti_groups_id.get (id);
             if (group == null) {
                 return;
@@ -214,6 +216,7 @@ namespace SwayNotificationCenter.Widgets {
         }
 
         public void replace_notification (uint32 id, NotifyParams new_params) {
+            Idle.add_once (() => control_center.fit_to_content ());
             unowned NotificationGroup ?group = noti_groups_id.get (id);
             if (group != null) {
                 noti_groups_id.unset (id);
@@ -232,6 +235,7 @@ namespace SwayNotificationCenter.Widgets {
         }
 
         public void add_notification (NotifyParams param) {
+            Idle.add_once (() => control_center.fit_to_content ());
             var noti = new Notification.regular (param, NotificationType.CONTROL_CENTER);
             noti.set_time ();
 
