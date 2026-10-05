@@ -105,13 +105,38 @@ namespace SwayNotificationCenter {
             }
         }
 
+        private void fit_to_content () {
+            fit_now ();
+            Timeout.add_once (ConfigModel.instance.transition_time + 60, fit_now);
+        }
+
+        private void fit_now () {
+            if (!get_mapped ()) {
+                return;
+            }
+            set_default_size (ConfigModel.instance.notification_window_width, -1);
+            queue_resize ();
+        }
+
         private void set_anchor () {
             debug ("NotificationWindow set_anchor");
             if (app.use_layer_shell) {
                 GtkLayerShell.set_layer (this, ConfigModel.instance.layer.to_layer ());
 
-                GtkLayerShell.set_anchor (this, GtkLayerShell.Edge.BOTTOM, true);
-                GtkLayerShell.set_anchor (this, GtkLayerShell.Edge.TOP, true);
+                // Only anchor to the top so the surface is as tall as the
+                // notifications (a full-height surface gets fully blurred by
+                // force-blur effects). Reuse the control center margins.
+                bool top = ConfigModel.instance.positionY != PositionY.BOTTOM;
+                GtkLayerShell.set_anchor (this, GtkLayerShell.Edge.BOTTOM, !top);
+                GtkLayerShell.set_anchor (this, GtkLayerShell.Edge.TOP, top);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.TOP,
+                                          ConfigModel.instance.control_center_margin_top);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.BOTTOM,
+                                          ConfigModel.instance.control_center_margin_bottom);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.LEFT,
+                                          ConfigModel.instance.control_center_margin_left);
+                GtkLayerShell.set_margin (this, GtkLayerShell.Edge.RIGHT,
+                                          ConfigModel.instance.control_center_margin_right);
                 switch (ConfigModel.instance.positionX) {
                     case PositionX.LEFT:
                         GtkLayerShell.set_anchor (
@@ -296,6 +321,7 @@ namespace SwayNotificationCenter {
         }
 
         public void add_notification (NotifyParams param) {
+            Idle.add_once (() => fit_to_content ());
             var noti = new Notification.timed (param,
                                                NotificationType.FLOATING,
                                                ConfigModel.instance.timeout,
@@ -324,6 +350,7 @@ namespace SwayNotificationCenter {
 
         /** Removes the notification widget with ID. Doesn't dismiss */
         public void remove_notification (uint32 id) {
+            Idle.add_once (() => fit_to_content ());
             unowned Notification ?notification = find_notification (id);
             if (notification != null) {
                 remove_notification_internal (notification, true);
@@ -331,6 +358,7 @@ namespace SwayNotificationCenter {
         }
 
         public void replace_notification (uint32 id, NotifyParams new_params) {
+            Idle.add_once (() => fit_to_content ());
             unowned Notification ?notification = find_notification (id);
             if (notification != null) {
                 // Replace the ID, could be changed depending on the
