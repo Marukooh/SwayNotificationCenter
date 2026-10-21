@@ -14,7 +14,7 @@ namespace SwayNotificationCenter {
 
         // Only ask for the keyboard (inline replies) while the pointer is over
         // the popup, so an incoming notification never steals focus.
-        private bool pointer_inside = false;
+        private bool wants_keyboard = false;
 
         private const int MAX_HEIGHT = 600;
 
@@ -51,18 +51,26 @@ namespace SwayNotificationCenter {
                     Idle.add_once (() => set_keyboard_mode ());
                 });
             });
-            var motion = new Gtk.EventControllerMotion ();
-            motion.enter.connect (() => {
-                pointer_inside = true;
+            // Only ask for the keyboard after the user clicks the popup.
+            // Hover alone is not enough: the pointer can sit (hidden) over
+            // the popup while a game has focus.
+            var click = new Gtk.GestureClick ();
+            click.set_propagation_phase (Gtk.PropagationPhase.CAPTURE);
+            click.pressed.connect (() => {
+                wants_keyboard = true;
                 set_keyboard_mode ();
             });
+            ((Gtk.Widget) this).add_controller (click);
+            var motion = new Gtk.EventControllerMotion ();
             motion.leave.connect (() => {
-                pointer_inside = false;
+                wants_keyboard = false;
                 set_keyboard_mode ();
             });
             ((Gtk.Widget) this).add_controller (motion);
 
             this.unmap.connect (() => {
+                // No leave event arrives when the window hides under the pointer
+                wants_keyboard = false;
                 set_keyboard_mode ();
                 debug ("NotificationWindow un-mapped");
             });
@@ -111,7 +119,7 @@ namespace SwayNotificationCenter {
          */
         private inline void set_keyboard_mode () {
             if (app.use_layer_shell) {
-                if (app.has_layer_on_demand && get_mapped () && pointer_inside
+                if (app.has_layer_on_demand && get_mapped () && wants_keyboard
                     && !inline_reply_notifications.is_empty) {
                     GtkLayerShell.set_keyboard_mode (this, GtkLayerShell.KeyboardMode.ON_DEMAND);
                 } else {
