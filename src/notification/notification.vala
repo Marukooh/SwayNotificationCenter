@@ -575,7 +575,7 @@ namespace SwayNotificationCenter {
                     flowbox_child.add_css_class ("notification-action");
                     alt_actions_box.append (flowbox_child);
 
-                    Gtk.Button action_button = new Gtk.Button.with_label (
+                    Gtk.Button action_button = new_action_button (
                         "COPY \"%s\"".printf (code));
                     action_button.clicked.connect (() => {
                         // Copy to clipboard
@@ -587,21 +587,42 @@ namespace SwayNotificationCenter {
                     flowbox_child.set_child (action_button);
                 }
 
-                int max_children_per_line = 0;
                 // Add notification specified actions
                 foreach (var action in param.actions.data) {
-                    max_children_per_line++;
                     Gtk.FlowBoxChild flowbox_child = new Gtk.FlowBoxChild ();
                     flowbox_child.add_css_class ("notification-action");
                     alt_actions_box.append (flowbox_child);
 
-                    Gtk.Button action_button = new Gtk.Button.with_label (action.text);
+                    Gtk.Button action_button = new_action_button (action.text);
                     action_button.clicked.connect (() => action_clicked (action));
                     action_button.set_can_focus (false);
                     flowbox_child.set_child (action_button);
                 }
-                alt_actions_box.set_max_children_per_line (max_children_per_line.clamp (1, 7));
+                // At most 3 per row, spread evenly over the rows so no
+                // button is left alone (4 -> 2+2, 5 -> 3+2, 7 -> 3+3+1)
+                int n = 0;
+                for (unowned Gtk.Widget ?c = alt_actions_box.get_first_child ();
+                     c != null; c = c.get_next_sibling ()) {
+                    n++;
+                }
+                int rows = (n + 2) / 3;
+                int per_line = (n + rows - 1) / rows;
+                alt_actions_box.set_min_children_per_line (per_line);
+                alt_actions_box.set_max_children_per_line (per_line);
             }
+        }
+
+        private Gtk.Button new_action_button (string text) {
+            var label = new Gtk.Label (text) {
+                ellipsize = Pango.EllipsizeMode.END,
+                max_width_chars = 1,
+                hexpand = true,
+            };
+            var button = new Gtk.Button () {
+                child = label,
+                tooltip_text = text,
+            };
+            return button;
         }
 
         public void set_time () {
