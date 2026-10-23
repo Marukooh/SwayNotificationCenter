@@ -12,8 +12,8 @@ namespace SwayNotificationCenter {
 
         private static string ?monitor_name = null;
 
-        // Only ask for the keyboard (inline replies) while the pointer is over
-        // the popup, so an incoming notification never steals focus.
+        // Only ask for the keyboard (inline replies) after the user clicks the
+        // popup, so an incoming notification never steals focus.
         private bool wants_keyboard = false;
 
         private const int MAX_HEIGHT = 600;
